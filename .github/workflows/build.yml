@@ -38,7 +38,7 @@ jobs:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: ${{ vars.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
-      - run: tar -xzf ${{steps.version_step.outputs.semVer}}.tar.gz dist package.json yarn.lock
+      - run: tar -czf ${{steps.version_step.outputs.semVer}}.tar.gz dist package.json yarn.lock
       - name: Create Sentry release
         uses: getsentry/action-release@v3
         env:
