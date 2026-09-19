@@ -144,7 +144,7 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: dist
-          skip-decompress: 'true  '
+          path: dist/
       - run: tar -czf ${{needs.version.outputs.version}}.tar.gz dist package.json yarn.lock
       - name: Create Sentry release
         uses: getsentry/action-release@v3
