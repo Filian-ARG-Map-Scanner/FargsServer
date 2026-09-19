@@ -74,6 +74,7 @@ jobs:
       packages: write
       attestations: write
       id-token: write
+      artifact-metadata: write
     env:
       REGISTRY: ghcr.io
       IMAGE_NAME: ${{ github.repository }}
@@ -119,6 +120,8 @@ jobs:
         with:
           context: .
           push: true
+          cache-to: type=gha
+          cache-from: type=gha
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           secret-envs: |
