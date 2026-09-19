@@ -140,6 +140,8 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Checkout
+        uses: actions/checkout@v7
       - name: Download built tar
         uses: actions/download-artifact@v8
         with:
