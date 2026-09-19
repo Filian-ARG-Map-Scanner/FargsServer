@@ -5,10 +5,11 @@ on:
       - '*'
     branches:
       - master
-
 jobs:
-  build:
-    runs-on: self-hosted
+  version:
+    runs-on: pve-cluster-runners
+    outputs:
+      version: ${{steps.version_step.outputs.semver}}
     permissions:
       contents: write
     steps:
@@ -24,7 +25,61 @@ jobs:
         id: version_step # step id used as reference for output values
         uses: gittools/actions/gitversion/execute@v4.7.0
       - name: Set Version
-        run: echo "VERSION=${{ steps.version_step.outputs.semVer }}" >> $GITHUB_ENV
+        run: echo "SEMVER=${{ steps.version_step.outputs.semVer }}" >> $GITHUB_OUTPUT
+  build-docker:
+    runs-on: pve-cluster-runners
+    needs: version
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+    env:
+      REGISTRY: ghcr.io
+      IMAGE_NAME: ${{ github.repository }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      - name: Log in to the Container registry
+        uses: docker/login-action@v4.6.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v6.2.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=semver,pattern={{version}},value=${{needs.version.outputs.version}}
+            type=sha
+      - name: Build and push Docker image
+        id: push
+        uses: docker/build-push-action@v7.4.0
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          secret-envs: |
+            SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
+            SENTRY_ORG=${{ vars.SENTRY_ORG }}
+            SENTRY_PROJECT=${{ vars.SENTRY_PROJECT }}
+      - name: Generate artifact attestation
+        uses: actions/attest@v4
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
+  build-tar:
+    runs-on: pve-cluster-runners
+    needs: version
+    permissions:
+      contents: write
+    steps:
       - name: Use Node.js 22.23.2
         uses: actions/setup-node@v7
         with:
@@ -38,7 +93,7 @@ jobs:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: ${{ vars.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
-      - run: tar -czf ${{steps.version_step.outputs.semVer}}.tar.gz dist package.json yarn.lock
+      - run: tar -czf ${{needs.version.outputs.version}}.tar.gz dist package.json yarn.lock
       - name: Create Sentry release
         uses: getsentry/action-release@v3
         env:
@@ -47,7 +102,7 @@ jobs:
           SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
         with:
           environment: production
-          release: ${{steps.version_step.outputs.fullSemVer}}
+          release: ${{needs.version.outputs.version}}
       - name: Create tag
         uses: actions/github-script@v5
         with:
@@ -55,14 +110,14 @@ jobs:
             github.rest.git.createRef({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              ref: 'refs/tags/${{steps.version_step.outputs.fullSemVer}}',
+              ref: 'refs/tags/${{needs.version.outputs.version}}',
               sha: context.sha
             })
       - name: Release
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: ${{steps.version_step.outputs.fullSemVer}}
+          tag_name: ${{needs.version.outputs.version}}
           target_commitish: ${{ github.sha }}
           generate_release_notes: true
           files: |
-            ${{steps.version_step.outputs.semVer}}.tar.gz
+            ${{needs.version.outputs.version}}.tar.gz
