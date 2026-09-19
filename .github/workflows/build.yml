@@ -34,7 +34,7 @@ jobs:
       - name: Set Version
         run: echo "SEMVER=${{ steps.version_step.outputs.semVer }}" >> $GITHUB_OUTPUT
   build-docker:
-    runs-on: pve-cluster-runners
+    runs-on: pve-cluster-runners-dind
     needs: version
     permissions:
       contents: read
@@ -101,6 +101,22 @@ jobs:
           SENTRY_ORG: ${{ vars.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
       - run: tar -czf ${{needs.version.outputs.version}}.tar.gz dist package.json yarn.lock
+      - name: Upload built tar
+        uses: actions/upload-artifact@v4
+        with:
+          name: tar
+          path: ${{needs.version.outputs.version}}.tar.gz
+  create-release:
+    runs-on: pve-cluster-runners-dind
+    needs:
+      - version
+      - build-tar
+      - build-docker
+    steps:
+      - name: Download built tar
+        uses: actions/download-artifact@v5
+        with:
+          name: tar
       - name: Create Sentry release
         uses: getsentry/action-release@v3
         env:
