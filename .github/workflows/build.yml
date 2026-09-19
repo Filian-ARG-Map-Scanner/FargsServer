@@ -31,9 +31,44 @@ jobs:
         uses: gittools/actions/gitversion/execute@v4.7.0
       - name: Set Version
         run: echo "SEMVER=${{ steps.version_step.outputs.semVer }}" >> $GITHUB_OUTPUT
+  build:
+    runs-on: pve-cluster-runners
+    needs: version
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Use Node.js 22.23.2
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22.23.2
+          package-manager-cache: 'false'
+      - name: install Yarn
+        run: npm i -g yarn
+      - uses: actions/cache@v2
+        with:
+          path: 'node_modules'
+          key: ${{ runner.os }}-modules-${{ hashFiles('yarn.lock') }}
+      - run: yarn install --frozen-lockfile --production=false
+      - run: yarn build
+        env:
+          NODE_ENV: production
+      - run: yarn run sentry:sourcemaps
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
+      - name: Upload built js
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
   build-docker:
     runs-on: pve-cluster-runners-dind
-    needs: version
+    needs:
+      - version
+      - build
     permissions:
       contents: read
       packages: write
@@ -45,6 +80,22 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+      - name: Download built tar
+        uses: actions/download-artifact@v5
+        with:
+          name: dist
+      - name: Use Node.js 22.23.2
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22.23.2
+          package-manager-cache: 'false'
+      - name: install Yarn
+        run: npm i -g yarn
+      - uses: actions/cache@v2
+        with:
+          path: 'node_modules'
+          key: ${{ runner.os }}-modules-${{ hashFiles('yarn.lock') }}
+      - run: yarn install --frozen-lockfile --production=true
       - name: Log in to the Container registry
         uses: docker/login-action@v4.6.0
         with:
@@ -79,44 +130,20 @@ jobs:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}
           subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: true
-  build-tar:
-    runs-on: pve-cluster-runners
-    needs: version
-    permissions:
-      contents: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-      - name: Use Node.js 22.23.2
-        uses: actions/setup-node@v7
-        with:
-          node-version: 22.23.2
-      - name: install Yarn
-        run: npm i -g yarn
-      - run: yarn install --frozen-lockfile
-      - run: yarn build
-      - run: yarn run sentry:sourcemaps
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
-          SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
-      - run: tar -czf ${{needs.version.outputs.version}}.tar.gz dist package.json yarn.lock
-      - name: Upload built tar
-        uses: actions/upload-artifact@v4
-        with:
-          name: tar
-          path: ${{needs.version.outputs.version}}.tar.gz
   create-release:
     runs-on: pve-cluster-runners-dind
     needs:
       - version
-      - build-tar
+      - build
       - build-docker
+    permissions:
+      contents: write
     steps:
       - name: Download built tar
         uses: actions/download-artifact@v5
         with:
-          name: tar
+          name: dist
+      - run: tar -czf ${{needs.version.outputs.version}}.tar.gz dist package.json yarn.lock
       - name: Create Sentry release
         uses: getsentry/action-release@v3
         env:
