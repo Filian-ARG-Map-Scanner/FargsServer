@@ -20,6 +20,8 @@ jobs:
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
+        env:
+          DOTNET_INSTALL_DIR: ${{ env.RUNNER_TOOL_CACHE }}
       - name: Install GitVersion
         uses: gittools/actions/gitversion/setup@v4.7.0
         with:
