@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fargsServer
+  labels:
+    app: fargsServer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fargsServer
+  template:
+    metadata:
+      name: fargsServer
+      labels:
+        app: fargsServer
+    spec:
+      containers:
+        - name: fargsServer
+          image: ghcr.io/filian-arg-map-scanner/fargsserver:latest
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - secretRef:
+                name: fargs_server_config
+      restartPolicy: Always
+      

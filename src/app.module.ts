@@ -13,7 +13,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
       migrationsRun: true,
       migrationsTableName: 'migrations',
       migrationsTransactionMode: 'all',
-      host: 'fargs.bibbythe.dev',
+      host: '10.200.0.5',
       port: 5432,
       database: process.env.DB_DB ? process.env.DB_DB : 'fargsdev',
       password: process.env.DB_PASSWORD ? process.env.DB_PASSWORD : 'fargsdev',

@@ -9,7 +9,13 @@ async function bootstrap() {
   app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.RMQ,
     options: {
-      urls: ['amqp://fargsserver:fargsserver@fargs.bibbythe.dev:1752/fargs'],
+      urls: [
+        'amqp://' +
+          process.env.RMQ_USERNAME +
+          ':' +
+          process.env.RMQ_PASSWORD +
+          '@fargs.bibbythe.dev:1752/fargs',
+      ],
       exchange: 'client-direct',
       exchangeType: 'direct',
       routingKey: 'server',
