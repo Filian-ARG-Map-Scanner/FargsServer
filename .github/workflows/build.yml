@@ -210,6 +210,8 @@ jobs:
       # Action to Create a Release
       - name: Create a release in Octopus Deploy 🐙
         uses: OctopusDeploy/create-release-action@v3
+        env:
+          OCTOPUS_SPACE: 'Default'
         with:
           project: 'fargs-server'
           release_number: ${{needs.version.outputs.version}}
@@ -219,6 +221,8 @@ jobs:
       # Action to Deploy a Release
       - name: Deploy a release in Octopus Deploy 🐙
         uses: OctopusDeploy/deploy-release-action@v3
+        env:
+          OCTOPUS_SPACE: 'Default'
         with:
           project: 'fargs-server'
           release_number: ${{needs.version.outputs.version}}
