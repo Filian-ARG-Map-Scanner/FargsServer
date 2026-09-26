@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: fargsServer
+  name: fargs-server
   labels:
-    app: fargsServer
+    app: fargs-server
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: fargsServer
+      app: fargs-server
   template:
     metadata:
-      name: fargsServer
+      name: fargs-server
       labels:
-        app: fargsServer
+        app: fargs-server
     spec:
       containers:
-        - name: fargsServer
+        - name: fargs-server
           image: ghcr.io/filian-arg-map-scanner/fargsserver:latest
           imagePullPolicy: IfNotPresent
           envFrom:
