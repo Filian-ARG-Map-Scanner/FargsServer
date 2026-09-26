@@ -215,8 +215,6 @@ jobs:
         with:
           project: 'fargs-server'
           release_number: ${{needs.version.outputs.version}}
-          git_ref: ${{ github.head_ref || github.ref }}
-          git_commit: ${{ github.event.pull_request.head.sha || github.sha }}
 
       # Action to Deploy a Release
       - name: Deploy a release in Octopus Deploy 🐙
