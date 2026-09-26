@@ -21,6 +21,6 @@ spec:
           imagePullPolicy: IfNotPresent
           envFrom:
             - secretRef:
-                name: fargs_server_config
+                name: fargs-server-config
       restartPolicy: Always
       
